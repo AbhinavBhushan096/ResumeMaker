@@ -47,6 +47,19 @@ Open [http://localhost:43127](http://localhost:43127) (the dev script uses port 
 - Prefer a single-column layout and clear headings for ATS-friendly PDFs.
 - Export JSON before restoring samples or clearing site data if you care about a version.
 
+## Deploy on Render
+
+This repo includes a [`render.yaml`](render.yaml) Blueprint.
+
+1. Push to GitHub (already at [AbhinavBhushan096/ResumeMaker](https://github.com/AbhinavBhushan096/ResumeMaker)).
+2. Open [Render → New → Blueprint](https://dashboard.render.com/blueprints) and connect that repo, **or** use:
+
+   [Deploy with Render](https://dashboard.render.com/blueprint/new?repo=https://github.com/AbhinavBhushan096/ResumeMaker)
+
+3. Apply the Blueprint. Render will build with `npm ci && npm run build` and start with `npm run start` (listens on `$PORT`).
+
+Free web services spin down after idle time; the first request after that can take a few seconds.
+
 ## License
 
 Private / personal use unless you add a license file.
