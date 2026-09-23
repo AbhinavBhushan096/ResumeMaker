@@ -140,6 +140,21 @@ export function useResumeStore() {
     commit(defaults);
   }, [commit]);
 
+  const importVersion = useCallback(
+    (version: ResumeVersion) => {
+      const imported: ResumeVersion = {
+        ...version,
+        id: createId("version"),
+        updatedAt: Date.now(),
+      };
+      updateStore((prev) => ({
+        versions: [...prev.versions, imported],
+        activeVersionId: imported.id,
+      }));
+    },
+    [updateStore],
+  );
+
   const patchHeader = useCallback(
     (patch: Partial<ResumeHeader>) => {
       updateActiveVersion((v) => ({
@@ -190,10 +205,12 @@ export function useResumeStore() {
 
   const addSection = useCallback(
     (title?: string, layout: SectionLayout = "entries") => {
+      const section = createEmptySection(title, layout);
       updateActiveVersion((v) => ({
         ...v,
-        sections: [...v.sections, createEmptySection(title, layout)],
+        sections: [...v.sections, section],
       }));
+      return section.id;
     },
     [updateActiveVersion],
   );
@@ -359,6 +376,7 @@ export function useResumeStore() {
     duplicateVersion,
     deleteVersion,
     resetToSamples,
+    importVersion,
     patchHeader,
     addLink,
     updateLink,

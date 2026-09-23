@@ -147,15 +147,8 @@
 
 @media (max-width: 640px) {
   .preview-stage {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  .resume-page {
-    width: 100%;
-    min-height: auto;
-    padding: 1.25rem 1rem;
-    transform-origin: top center;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 }
 
@@ -180,7 +173,9 @@
 
   .app-shell {
     background: white !important;
+    height: auto !important;
     min-height: 0 !important;
+    overflow: visible !important;
   }
 
   .preview-pane,
@@ -192,6 +187,16 @@
     border-radius: 0 !important;
     overflow: visible !important;
     display: block !important;
+    height: auto !important;
+  }
+
+  .preview-fit,
+  .preview-fit-inner {
+    position: static !important;
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .resume-page {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { HeaderEditor } from "@/components/editor/header-editor";
 import { SectionEditor } from "@/components/editor/section-editor";
@@ -32,9 +33,43 @@ const SECTION_PRESETS: { title: string; layout: SectionLayout }[] = [
 ];
 
 export function ResumeEditorPanel({ resume, store }: ResumeEditorPanelProps) {
+  const [openSectionId, setOpenSectionId] = useState<string | null>(
+    resume.sections[0]?.id ?? null,
+  );
+  const skipScroll = useRef(true);
+
+  useEffect(() => {
+    setOpenSectionId((current) => {
+      if (
+        current &&
+        resume.sections.some((section) => section.id === current)
+      ) {
+        return current;
+      }
+      return resume.sections[0]?.id ?? null;
+    });
+  }, [resume.id, resume.sections]);
+
+  useEffect(() => {
+    if (skipScroll.current) {
+      skipScroll.current = false;
+      return;
+    }
+    if (!openSectionId) return;
+    document
+      .getElementById(`section-card-${openSectionId}`)
+      ?.scrollIntoView({ block: "nearest" });
+  }, [openSectionId]);
+
+  const openAddedSection = (title: string, layout: SectionLayout) => {
+    const id = store.addSection(title, layout);
+    setOpenSectionId(id);
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 pb-8">
       <HeaderEditor
+        key={resume.id}
         header={resume.header}
         onPatch={store.patchHeader}
         onAddLink={store.addLink}
@@ -42,11 +77,11 @@ export function ResumeEditorPanel({ resume, store }: ResumeEditorPanelProps) {
         onRemoveLink={store.removeLink}
       />
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 px-1">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Sections</h2>
           <p className="text-xs text-muted-foreground">
-            Add, hide, rename, and reorder freely.
+            Open one at a time. Reorder, hide, or rename each.
           </p>
         </div>
         <DropdownMenu>
@@ -60,13 +95,13 @@ export function ResumeEditorPanel({ resume, store }: ResumeEditorPanelProps) {
             {SECTION_PRESETS.map((preset) => (
               <DropdownMenuItem
                 key={preset.title}
-                onClick={() => store.addSection(preset.title, preset.layout)}
+                onClick={() => openAddedSection(preset.title, preset.layout)}
               >
                 {preset.title}
               </DropdownMenuItem>
             ))}
             <DropdownMenuItem
-              onClick={() => store.addSection("Custom Section", "entries")}
+              onClick={() => openAddedSection("Custom Section", "entries")}
             >
               Custom section…
             </DropdownMenuItem>
@@ -88,6 +123,12 @@ export function ResumeEditorPanel({ resume, store }: ResumeEditorPanelProps) {
             section={section}
             index={index}
             total={resume.sections.length}
+            open={openSectionId === section.id}
+            onToggle={() =>
+              setOpenSectionId((current) =>
+                current === section.id ? null : section.id,
+              )
+            }
             onUpdate={(patch) => store.updateSection(section.id, patch)}
             onRemove={() => store.removeSection(section.id)}
             onMove={(dir) => store.moveSection(section.id, dir)}

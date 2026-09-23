@@ -26,7 +26,11 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
     >
       <header className="resume-header border-b border-neutral-800 pb-3">
         <h1 className="resume-name text-[22pt] font-semibold leading-tight tracking-tight">
-          {header.name || "Your Name"}
+          {header.name || (
+            <span className="font-normal text-neutral-400 print:hidden">
+              Your Name
+            </span>
+          )}
         </h1>
         {header.title ? (
           <p className="resume-title mt-0.5 text-[11pt] font-medium text-neutral-700">
@@ -50,7 +54,7 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
       </header>
 
       {visibleSections.length === 0 ? (
-        <p className="mt-8 text-center text-[10pt] text-neutral-500">
+        <p className="mt-8 text-center text-[10pt] text-neutral-500 print:hidden">
           No visible sections yet. Add a section in the editor or unhide one.
         </p>
       ) : (
@@ -64,7 +68,7 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
               {section.layout === "text" ? (
                 <p className="mt-2 text-[10pt] leading-snug text-neutral-800 whitespace-pre-wrap">
                   {section.text || (
-                    <span className="text-neutral-400 italic">
+                    <span className="text-neutral-400 italic print:hidden">
                       Add summary text in the editor…
                     </span>
                   )}
@@ -78,7 +82,7 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
                     .map((t) => t.trim())
                     .filter(Boolean)
                     .join(" · ") || (
-                    <span className="text-neutral-400 italic">
+                    <span className="text-neutral-400 italic print:hidden">
                       Add skills separated by commas…
                     </span>
                   )}
@@ -88,7 +92,7 @@ export function ResumePreview({ resume }: ResumePreviewProps) {
               {section.layout === "entries" ? (
                 <div className="mt-2 space-y-3">
                   {section.entries.length === 0 ? (
-                    <p className="text-[10pt] italic text-neutral-400">
+                    <p className="text-[10pt] italic text-neutral-400 print:hidden">
                       No entries yet.
                     </p>
                   ) : (
