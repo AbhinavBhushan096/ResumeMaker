@@ -1,41 +1,52 @@
 # Resume Maker
 
-Personal resume builder with a live A4 preview. You control section titles, layouts, and content — not locked to a fixed template.
+A personal resume builder with a live A4 preview. Edit on one side, see the printable page update on the other. Sections are fully yours — titles, layouts, and content are not locked to a fixed template.
+
+Everything stays in your browser (`localStorage`). No account or server required.
 
 ## Features
 
 - **Custom sections** — add, remove, rename, hide, and reorder any section (summary, skills, experience, projects, certifications, or your own)
-- **Live A4 preview** — editor on one side, printable resume on the other
-- **Multiple versions** — save and switch resumes (e.g. Frontend, Cloud/DevOps, General); persisted in `localStorage`
-- **Header & links** — name, title, phone, email, location, plus add/remove reference links
-- **PDF export** — Download PDF opens the browser print dialog (Save as PDF) with an A4 print stylesheet matching the preview
-
-No account or database — everything stays in your browser.
+- **Flexible layouts** — paragraph text, comma-separated skills/tags, or entry lists with bullets
+- **Live A4 preview** — Fit or 100% zoom; print stylesheet matches what you see
+- **Multiple versions** — keep separate resumes (e.g. Frontend, Cloud/DevOps, General) and switch between them
+- **Header & links** — name, title, phone, email, location, plus LinkedIn / GitHub / portfolio links
+- **Import / export JSON** — back up a version or move it between browsers
+- **PDF export** — **Download PDF** opens the browser print dialog (Save as PDF)
+- **Mobile-friendly** — Edit / Preview toggle on small screens; collapsible sections keep the editor usable
 
 ## Stack
 
-Next.js (App Router), TypeScript, Tailwind CSS, shadcn/ui
+- [Next.js](https://nextjs.org/) (App Router)
+- TypeScript
+- Tailwind CSS
+- [shadcn/ui](https://ui.shadcn.com/)
 
-## Run locally
+## Getting started
 
 ```bash
 npm install
-npm run dev -- --port 43127
+npm run dev
 ```
 
-Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
+Open [http://localhost:43127](http://localhost:43127) (the dev script uses port `43127`).
 
-## Scripts
+### Scripts
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start the development server |
+| `npm run dev` | Start the development server on port 43127 |
 | `npm run build` | Production build |
-| `npm run start` | Serve the production build |
+| `npm run start` | Serve the production build on port 43127 |
 | `npm run lint` | Run ESLint |
 
-## Notes
+## Usage tips
 
 - Sample resumes load on first visit so the preview is never empty.
-- Use **Restore sample resumes** in the toolbar menu to reset local data.
+- Use **Restore sample resumes** in the toolbar menu (⋯) to reset local data.
 - Prefer a single-column layout and clear headings for ATS-friendly PDFs.
+- Export JSON before restoring samples or clearing site data if you care about a version.
+
+## License
+
+Private / personal use unless you add a license file.
