@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createBlankVersion, createDefaultStore } from "@/lib/sample-data";
 import { loadStore, saveStore, STORAGE_KEY } from "@/lib/storage";
 import {
@@ -22,63 +16,53 @@ import {
   type SectionLayout,
 } from "@/lib/types";
 
-let memoryStore: ResumeStore | null = null;
-const listeners = new Set<() => void>();
-
-function emit() {
-  listeners.forEach((l) => l());
-}
-
-function getSnapshot(): ResumeStore {
-  if (!memoryStore) {
-    memoryStore = loadStore();
-  }
-  return memoryStore;
-}
-
-function getServerSnapshot(): ResumeStore {
-  return {
-    versions: [],
-    activeVersionId: "",
-  };
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener);
-  return () => listeners.delete(listener);
-}
-
-function updateStore(updater: (prev: ResumeStore) => ResumeStore) {
-  const next = updater(getSnapshot());
-  memoryStore = next;
-  saveStore(next);
-  emit();
-}
-
-function updateActiveVersion(
+function updateActiveVersionInStore(
+  store: ResumeStore,
   updater: (version: ResumeVersion) => ResumeVersion,
-) {
-  updateStore((prev) => ({
-    ...prev,
-    versions: prev.versions.map((v) =>
-      v.id === prev.activeVersionId
+): ResumeStore {
+  return {
+    ...store,
+    versions: store.versions.map((v) =>
+      v.id === store.activeVersionId
         ? { ...updater(v), updatedAt: Date.now() }
         : v,
     ),
-  }));
+  };
 }
 
 export function useResumeStore() {
-  const store = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const [hydrated, setHydrated] = useState(false);
+  const [store, setStore] = useState<ResumeStore | null>(null);
 
   useEffect(() => {
-    memoryStore = loadStore();
-    emit();
-    setHydrated(true);
+    setStore(loadStore());
   }, []);
 
+  const commit = useCallback((next: ResumeStore) => {
+    setStore(next);
+    saveStore(next);
+  }, []);
+
+  const updateStore = useCallback(
+    (updater: (prev: ResumeStore) => ResumeStore) => {
+      setStore((prev) => {
+        if (!prev) return prev;
+        const next = updater(prev);
+        saveStore(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const updateActiveVersion = useCallback(
+    (updater: (version: ResumeVersion) => ResumeVersion) => {
+      updateStore((prev) => updateActiveVersionInStore(prev, updater));
+    },
+    [updateStore],
+  );
+
   const activeVersion = useMemo(() => {
+    if (!store) return null;
     return (
       store.versions.find((v) => v.id === store.activeVersionId) ??
       store.versions[0] ??
@@ -86,68 +70,85 @@ export function useResumeStore() {
     );
   }, [store]);
 
-  const setActiveVersionId = useCallback((id: string) => {
-    updateStore((prev) => ({ ...prev, activeVersionId: id }));
-  }, []);
+  const setActiveVersionId = useCallback(
+    (id: string) => {
+      updateStore((prev) => ({ ...prev, activeVersionId: id }));
+    },
+    [updateStore],
+  );
 
-  const renameVersion = useCallback((id: string, name: string) => {
-    updateStore((prev) => ({
-      ...prev,
-      versions: prev.versions.map((v) =>
-        v.id === id ? { ...v, name, updatedAt: Date.now() } : v,
-      ),
-    }));
-  }, []);
+  const renameVersion = useCallback(
+    (id: string, name: string) => {
+      updateStore((prev) => ({
+        ...prev,
+        versions: prev.versions.map((v) =>
+          v.id === id ? { ...v, name, updatedAt: Date.now() } : v,
+        ),
+      }));
+    },
+    [updateStore],
+  );
 
-  const createVersion = useCallback((name?: string) => {
-    const version = createBlankVersion(name ?? "Untitled Resume");
-    updateStore((prev) => ({
-      versions: [...prev.versions, version],
-      activeVersionId: version.id,
-    }));
-    return version.id;
-  }, []);
+  const createVersion = useCallback(
+    (name?: string) => {
+      const version = createBlankVersion(name ?? "Untitled Resume");
+      updateStore((prev) => ({
+        versions: [...prev.versions, version],
+        activeVersionId: version.id,
+      }));
+      return version.id;
+    },
+    [updateStore],
+  );
 
-  const duplicateVersion = useCallback((id: string) => {
-    const source = getSnapshot().versions.find((v) => v.id === id);
-    if (!source) return;
-    const copy: ResumeVersion = {
-      ...structuredClone(source),
-      id: createId("version"),
-      name: `${source.name} (copy)`,
-      updatedAt: Date.now(),
-    };
-    updateStore((prev) => ({
-      versions: [...prev.versions, copy],
-      activeVersionId: copy.id,
-    }));
-  }, []);
+  const duplicateVersion = useCallback(
+    (id: string) => {
+      updateStore((prev) => {
+        const source = prev.versions.find((v) => v.id === id);
+        if (!source) return prev;
+        const copy: ResumeVersion = {
+          ...structuredClone(source),
+          id: createId("version"),
+          name: `${source.name} (copy)`,
+          updatedAt: Date.now(),
+        };
+        return {
+          versions: [...prev.versions, copy],
+          activeVersionId: copy.id,
+        };
+      });
+    },
+    [updateStore],
+  );
 
-  const deleteVersion = useCallback((id: string) => {
-    updateStore((prev) => {
-      if (prev.versions.length <= 1) return prev;
-      const versions = prev.versions.filter((v) => v.id !== id);
-      const activeVersionId =
-        prev.activeVersionId === id ? versions[0].id : prev.activeVersionId;
-      return { versions, activeVersionId };
-    });
-  }, []);
+  const deleteVersion = useCallback(
+    (id: string) => {
+      updateStore((prev) => {
+        if (prev.versions.length <= 1) return prev;
+        const versions = prev.versions.filter((v) => v.id !== id);
+        const activeVersionId =
+          prev.activeVersionId === id ? versions[0].id : prev.activeVersionId;
+        return { versions, activeVersionId };
+      });
+    },
+    [updateStore],
+  );
 
   const resetToSamples = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY);
     const defaults = createDefaultStore();
-    memoryStore = defaults;
-    saveStore(defaults);
-    emit();
-  }, []);
+    commit(defaults);
+  }, [commit]);
 
-  const updateHeader = useCallback((header: ResumeHeader) => {
-    updateActiveVersion((v) => ({ ...v, header }));
-  }, []);
-
-  const patchHeader = useCallback((patch: Partial<ResumeHeader>) => {
-    updateActiveVersion((v) => ({ ...v, header: { ...v.header, ...patch } }));
-  }, []);
+  const patchHeader = useCallback(
+    (patch: Partial<ResumeHeader>) => {
+      updateActiveVersion((v) => ({
+        ...v,
+        header: { ...v.header, ...patch },
+      }));
+    },
+    [updateActiveVersion],
+  );
 
   const addLink = useCallback(() => {
     updateActiveVersion((v) => ({
@@ -157,7 +158,7 @@ export function useResumeStore() {
         links: [...v.header.links, createEmptyLink()],
       },
     }));
-  }, []);
+  }, [updateActiveVersion]);
 
   const updateLink = useCallback(
     (linkId: string, patch: Partial<{ label: string; url: string }>) => {
@@ -171,18 +172,21 @@ export function useResumeStore() {
         },
       }));
     },
-    [],
+    [updateActiveVersion],
   );
 
-  const removeLink = useCallback((linkId: string) => {
-    updateActiveVersion((v) => ({
-      ...v,
-      header: {
-        ...v.header,
-        links: v.header.links.filter((l) => l.id !== linkId),
-      },
-    }));
-  }, []);
+  const removeLink = useCallback(
+    (linkId: string) => {
+      updateActiveVersion((v) => ({
+        ...v,
+        header: {
+          ...v.header,
+          links: v.header.links.filter((l) => l.id !== linkId),
+        },
+      }));
+    },
+    [updateActiveVersion],
+  );
 
   const addSection = useCallback(
     (title?: string, layout: SectionLayout = "entries") => {
@@ -191,7 +195,7 @@ export function useResumeStore() {
         sections: [...v.sections, createEmptySection(title, layout)],
       }));
     },
-    [],
+    [updateActiveVersion],
   );
 
   const updateSection = useCallback(
@@ -203,39 +207,48 @@ export function useResumeStore() {
         ),
       }));
     },
-    [],
+    [updateActiveVersion],
   );
 
-  const removeSection = useCallback((sectionId: string) => {
-    updateActiveVersion((v) => ({
-      ...v,
-      sections: v.sections.filter((s) => s.id !== sectionId),
-    }));
-  }, []);
+  const removeSection = useCallback(
+    (sectionId: string) => {
+      updateActiveVersion((v) => ({
+        ...v,
+        sections: v.sections.filter((s) => s.id !== sectionId),
+      }));
+    },
+    [updateActiveVersion],
+  );
 
-  const moveSection = useCallback((sectionId: string, direction: -1 | 1) => {
-    updateActiveVersion((v) => {
-      const index = v.sections.findIndex((s) => s.id === sectionId);
-      if (index < 0) return v;
-      const target = index + direction;
-      if (target < 0 || target >= v.sections.length) return v;
-      const sections = [...v.sections];
-      const [item] = sections.splice(index, 1);
-      sections.splice(target, 0, item);
-      return { ...v, sections };
-    });
-  }, []);
+  const moveSection = useCallback(
+    (sectionId: string, direction: -1 | 1) => {
+      updateActiveVersion((v) => {
+        const index = v.sections.findIndex((s) => s.id === sectionId);
+        if (index < 0) return v;
+        const target = index + direction;
+        if (target < 0 || target >= v.sections.length) return v;
+        const sections = [...v.sections];
+        const [item] = sections.splice(index, 1);
+        sections.splice(target, 0, item);
+        return { ...v, sections };
+      });
+    },
+    [updateActiveVersion],
+  );
 
-  const addEntry = useCallback((sectionId: string) => {
-    updateActiveVersion((v) => ({
-      ...v,
-      sections: v.sections.map((s) =>
-        s.id === sectionId
-          ? { ...s, entries: [...s.entries, createEmptyEntry()] }
-          : s,
-      ),
-    }));
-  }, []);
+  const addEntry = useCallback(
+    (sectionId: string) => {
+      updateActiveVersion((v) => ({
+        ...v,
+        sections: v.sections.map((s) =>
+          s.id === sectionId
+            ? { ...s, entries: [...s.entries, createEmptyEntry()] }
+            : s,
+        ),
+      }));
+    },
+    [updateActiveVersion],
+  );
 
   const updateEntry = useCallback(
     (sectionId: string, entryId: string, patch: Partial<SectionEntry>) => {
@@ -253,19 +266,22 @@ export function useResumeStore() {
         ),
       }));
     },
-    [],
+    [updateActiveVersion],
   );
 
-  const removeEntry = useCallback((sectionId: string, entryId: string) => {
-    updateActiveVersion((v) => ({
-      ...v,
-      sections: v.sections.map((s) =>
-        s.id === sectionId
-          ? { ...s, entries: s.entries.filter((e) => e.id !== entryId) }
-          : s,
-      ),
-    }));
-  }, []);
+  const removeEntry = useCallback(
+    (sectionId: string, entryId: string) => {
+      updateActiveVersion((v) => ({
+        ...v,
+        sections: v.sections.map((s) =>
+          s.id === sectionId
+            ? { ...s, entries: s.entries.filter((e) => e.id !== entryId) }
+            : s,
+        ),
+      }));
+    },
+    [updateActiveVersion],
+  );
 
   const updateBullet = useCallback(
     (
@@ -290,23 +306,26 @@ export function useResumeStore() {
         }),
       }));
     },
-    [],
+    [updateActiveVersion],
   );
 
-  const addBullet = useCallback((sectionId: string, entryId: string) => {
-    updateActiveVersion((v) => ({
-      ...v,
-      sections: v.sections.map((s) => {
-        if (s.id !== sectionId) return s;
-        return {
-          ...s,
-          entries: s.entries.map((e) =>
-            e.id === entryId ? { ...e, bullets: [...e.bullets, ""] } : e,
-          ),
-        };
-      }),
-    }));
-  }, []);
+  const addBullet = useCallback(
+    (sectionId: string, entryId: string) => {
+      updateActiveVersion((v) => ({
+        ...v,
+        sections: v.sections.map((s) => {
+          if (s.id !== sectionId) return s;
+          return {
+            ...s,
+            entries: s.entries.map((e) =>
+              e.id === entryId ? { ...e, bullets: [...e.bullets, ""] } : e,
+            ),
+          };
+        }),
+      }));
+    },
+    [updateActiveVersion],
+  );
 
   const removeBullet = useCallback(
     (sectionId: string, entryId: string, bulletIndex: number) => {
@@ -327,12 +346,12 @@ export function useResumeStore() {
         }),
       }));
     },
-    [],
+    [updateActiveVersion],
   );
 
   return {
-    hydrated,
-    store,
+    hydrated: store !== null,
+    store: store ?? { versions: [], activeVersionId: "" },
     activeVersion,
     setActiveVersionId,
     renameVersion,
@@ -340,7 +359,6 @@ export function useResumeStore() {
     duplicateVersion,
     deleteVersion,
     resetToSamples,
-    updateHeader,
     patchHeader,
     addLink,
     updateLink,

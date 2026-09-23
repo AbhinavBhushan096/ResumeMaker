@@ -131,6 +131,7 @@ export function SectionEditor({
               onUpdate({ layout: value });
             }
           }}
+          items={LAYOUT_LABELS}
         >
           <SelectTrigger className="w-full">
             <SelectValue />

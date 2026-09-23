@@ -61,9 +61,10 @@ export function VersionToolbar({
           onValueChange={(value) => {
             if (value) onSelect(value);
           }}
+          items={Object.fromEntries(versions.map((v) => [v.id, v.name]))}
         >
           <SelectTrigger className="h-8 w-[min(100%,14rem)]" size="sm">
-            <SelectValue placeholder="Select version" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             {versions.map((v) => (
